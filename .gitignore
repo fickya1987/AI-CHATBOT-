@@ -1,0 +1,20 @@
+
+# Virtual Environment
+venv/
+.env
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Streamlit Session Cache
+.streamlit/
+
+# Logs and Debugging
+logs/
+*.log
+
+# Jupyter Notebooks Checkpoints
+.ipynb_checkpoints/

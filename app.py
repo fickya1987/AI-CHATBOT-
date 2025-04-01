@@ -73,7 +73,11 @@ with st.sidebar:
 
     st.markdown("---")
     st.subheader("🤖 Model Selection")
-    model_options = {"DeepSeek-R1": "deepseek-ai/DeepSeek-R1"}
+    model_options = {
+        "DeepSeek-R1": "deepseek-ai/DeepSeek-R1",
+        "Mistral 7B": "mistralai/Mistral-7B-v0.1",
+        "OpenChat": "openchat/openchat-3.5-0106"
+    }
     selected_model_name = st.selectbox("Choose a Model", list(model_options.keys()))
     selected_model = model_options[selected_model_name]
 

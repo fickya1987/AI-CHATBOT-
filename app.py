@@ -6,15 +6,10 @@ import streamlit as st
 from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer
 from huggingface_hub import login
 
-# --- Optionally load API key from environment (e.g. via a .env file) ---
-# For example, you could use: from dotenv import load_dotenv; load_dotenv()
-
-# --- Page Configuration ---
 st.set_page_config(page_title="DeepSeek LLM Chat Pro", page_icon="🤖", layout="wide")
 st.title("DeepSeek LLM Chat Pro 🚀")
 st.markdown("Interact with advanced DeepSeek models and customize your chat experience!")
 
-# --- Custom CSS Styling ---
 st.markdown("""
     <style>
     .stApp { background-color: #f8f9fa; }
@@ -50,36 +45,24 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- Model Loading with Caching ---
 @st.cache_resource(show_spinner=True)
 def load_model(model_name, hf_api_key=None):
     try:
         if hf_api_key:
             login(token=hf_api_key)
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
-        model = AutoModelForCausalLM.from_pretrained(model_name)
-        gen_pipeline = pipeline(
-            "text-generation",
-            model=model,
-            tokenizer=tokenizer,
-            trust_remote_code=True
-        )
+        tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+        model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True)
+        gen_pipeline = pipeline("text-generation", model=model, tokenizer=tokenizer)
         return gen_pipeline, tokenizer
     except Exception as e:
         st.error(f"Model loading failed: {e}")
         return None, None
 
-# --- Sidebar Configuration ---
 with st.sidebar:
     st.header("⚙️ Settings")
     st.markdown("---")
-    
-    # API Key Input
-    hf_api_key_source = st.radio(
-        "🔑 Hugging Face API Key",
-        ["Not Required (Public Model)", "Enter Manually"],
-        index=0,
-    )
+
+    hf_api_key_source = st.radio("🔑 Hugging Face API Key", ["Not Required (Public Model)", "Enter Manually"], index=0)
     hf_api_key = None
     if hf_api_key_source == "Enter Manually":
         hf_api_key = st.text_input("Enter Your API Key", type="password")
@@ -87,23 +70,20 @@ with st.sidebar:
             st.success("🔑 API Key Entered.")
         else:
             st.warning("🔑 API Key not provided. Using public access.")
-    
+
     st.markdown("---")
     st.subheader("🤖 Model Selection")
-    model_options = {
-        "DeepSeek-V3-0324": "deepseek-ai/DeepSeek-V3-0324",
-        # Additional models can be added here.
-    }
+    model_options = {"DeepSeek-R1": "deepseek-ai/DeepSeek-R1"}
     selected_model_name = st.selectbox("Choose a Model", list(model_options.keys()))
     selected_model = model_options[selected_model_name]
-    
+
     st.markdown("---")
     st.subheader("⚙️ Generation Parameters")
     max_length = st.slider("Max Length", 32, 2048, 512, 32)
     temperature = st.slider("Temperature", 0.01, 1.0, 0.7, 0.01)
     top_p = st.slider("Top P", 0.01, 1.0, 0.95, 0.01)
     repetition_penalty = st.slider("Repetition Penalty", 1.0, 2.0, 1.0, 0.05)
-    
+
     st.markdown("---")
     st.subheader("💡 Prompt Templates")
     prompt_templates = {
@@ -116,23 +96,16 @@ with st.sidebar:
     if selected_template != "Default":
         st.info(f"Selected Template: {selected_template}")
 
-# --- Initialize Model ---
 pipe, tokenizer = load_model(selected_model, hf_api_key)
 
-# --- Chat History Management ---
 if "messages" not in st.session_state:
     st.session_state["messages"] = [{"role": "assistant", "content": "Hello! Ask me anything."}]
 
-# --- Display Chat History ---
 for msg in st.session_state.messages:
-    if msg["role"] == "user":
-        with st.chat_message("user"):
-            st.markdown(f"<div class='user-bubble'>{msg['content']}</div>", unsafe_allow_html=True)
-    else:
-        with st.chat_message("assistant"):
-            st.markdown(f"<div class='chat-bubble'>{msg['content']}</div>", unsafe_allow_html=True)
+    with st.chat_message(msg["role"]):
+        bubble_class = 'user-bubble' if msg["role"] == "user" else 'chat-bubble'
+        st.markdown(f"<div class='{bubble_class}'>{msg['content']}</div>", unsafe_allow_html=True)
 
-# --- Prompt Input and Text Generation ---
 if prompt := st.chat_input("Ask a question or enter a prompt"):
     if not pipe:
         st.error("Model failed to load. Check your API key and connection.")
@@ -160,16 +133,7 @@ if prompt := st.chat_input("Ask a question or enter a prompt"):
                 st.info(f"Generated in {generation_time:.2f} seconds.")
             except Exception as e:
                 st.error(f"An error occurred: {e}")
-                if "401" in str(e):
-                    st.error("Invalid API key or unauthorized access.")
-                elif "429" in str(e):
-                    st.error("Rate limit exceeded. Consider using an API key.")
-                elif "No model was supplied" in str(e):
-                    st.error("Model not loaded. Check your model selection or connection.")
-                elif "ConnectionError" in str(e):
-                    st.error("Connection error. Check your internet connection.")
 
-# --- Apply Prompt Template (if applicable) ---
 if selected_template != "Default" and prompt:
     template_text = prompt_templates[selected_template]
     if "{text}" in template_text:
@@ -185,7 +149,6 @@ if selected_template != "Default" and prompt:
     else:
         st.warning("The selected template does not match your input.")
 
-# --- Chat Controls: Clear and Save ---
 col1_clear, col2_save = st.columns([1, 1])
 if col1_clear.button("🗑️ Clear Chat"):
     st.session_state.messages = [{"role": "assistant", "content": "Chat cleared. Start a new conversation!"}]
@@ -204,8 +167,8 @@ if col2_save.button("💾 Save Chat"):
     else:
         st.warning("No conversation to save.")
 
-# --- Footer ---
 st.markdown("---")
 st.markdown("Developed with ❤️ using [Streamlit](https://streamlit.io/) and [Hugging Face Transformers](https://huggingface.co/docs/transformers/index).")
 current_time_pk = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=5)))
 st.markdown(f"Current Location: Karachi, Sindh, Pakistan. (Time: {current_time_pk.strftime('%Y-%m-%d %H:%M:%S')} PKT)")
+
